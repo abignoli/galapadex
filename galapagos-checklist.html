@@ -1,0 +1,955 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Galápagos Endemic Species Checklist</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=DM+Mono:wght@300;400&family=Lora:ital@0;1&display=swap" rel="stylesheet">
+<style>
+  /* ── Design tokens ── */
+  :root {
+    --bg:        #0b1520;
+    --surface:   #112030;
+    --surface2:  #162840;
+    --border:    rgba(56, 189, 190, 0.15);
+    --border-hi: rgba(56, 189, 190, 0.4);
+    --teal:      #38bdbe;
+    --teal-dim:  #1e8a8b;
+    --green:     #4caf82;
+    --green-dim: #2d6e50;
+    --text:      #e2eef2;
+    --text-dim:  #7aa8b8;
+    --text-mute: #3d6070;
+    --accent:    #38bdbe;
+    --danger:    #e05a4a;
+    --warn:      #d4943a;
+    --ok:        #4caf82;
+  }
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { background-color: #0b1520; }
+
+body {
+background: #0b1520;
+color: #e2eef2;
+font-family: ‘Lora’, serif;
+min-height: 100vh;
+overflow-x: hidden;
+}
+
+/* Subtle radial glow in background */
+body::before {
+content: ‘’;
+position: fixed;
+inset: 0;
+background:
+radial-gradient(ellipse 70% 50% at 15% 90%, rgba(56,189,190,0.07) 0%, transparent 60%),
+radial-gradient(ellipse 60% 40% at 85% 10%, rgba(76,175,130,0.06) 0%, transparent 60%);
+pointer-events: none;
+z-index: 0;
+}
+
+.container {
+max-width: 1140px;
+margin: 0 auto;
+padding: 0 24px 80px;
+position: relative;
+z-index: 1;
+}
+
+/* ── Header ── */
+header {
+text-align: center;
+padding: 64px 0 44px;
+border-bottom: 1px solid rgba(56,189,190,0.15);
+margin-bottom: 48px;
+}
+
+.header-label {
+font-family: ‘DM Mono’, monospace;
+font-size: 11px;
+letter-spacing: 5px;
+text-transform: uppercase;
+color: #38bdbe;
+margin-bottom: 18px;
+opacity: 0.9;
+}
+
+h1 {
+font-family: ‘Playfair Display’, serif;
+font-size: clamp(2rem, 5vw, 3.6rem);
+font-weight: 400;
+line-height: 1.15;
+color: #e2eef2;
+margin-bottom: 14px;
+}
+
+h1 em {
+color: #38bdbe;
+font-style: italic;
+}
+
+.subtitle {
+font-family: ‘Lora’, serif;
+font-style: italic;
+font-size: 1rem;
+color: #7aa8b8;
+}
+
+/* ── Stats bar ── */
+.stats-bar {
+display: flex;
+gap: 40px;
+justify-content: center;
+flex-wrap: wrap;
+margin-bottom: 40px;
+}
+
+.stat { text-align: center; }
+
+.stat-num {
+font-family: ‘Playfair Display’, serif;
+font-size: 2.2rem;
+color: #38bdbe;
+display: block;
+line-height: 1;
+margin-bottom: 4px;
+}
+
+.stat-label {
+font-family: ‘DM Mono’, monospace;
+font-size: 10px;
+letter-spacing: 2px;
+text-transform: uppercase;
+color: #7aa8b8;
+}
+
+/* ── Progress bar ── */
+.progress-wrap {
+max-width: 520px;
+margin: 0 auto 48px;
+}
+
+.progress-header {
+display: flex;
+justify-content: space-between;
+margin-bottom: 8px;
+font-family: ‘DM Mono’, monospace;
+font-size: 11px;
+letter-spacing: 1px;
+color: #7aa8b8;
+}
+
+.progress-track {
+height: 5px;
+background: #162840;
+border-radius: 3px;
+overflow: hidden;
+}
+
+.progress-fill {
+height: 100%;
+background: linear-gradient(90deg, #1e8a8b, #38bdbe);
+border-radius: 3px;
+transition: width 0.5s ease;
+width: 0%;
+}
+
+/* ── Filter buttons ── */
+.filters {
+display: flex;
+gap: 8px;
+flex-wrap: wrap;
+justify-content: center;
+margin-bottom: 40px;
+}
+
+.filter-btn {
+font-family: ‘DM Mono’, monospace;
+font-size: 11px;
+letter-spacing: 2px;
+text-transform: uppercase;
+padding: 8px 18px;
+border: 1px solid rgba(56,189,190,0.15);
+background: #112030;
+color: #7aa8b8;
+border-radius: 4px;
+cursor: pointer;
+transition: all 0.2s;
+}
+
+.filter-btn:hover {
+border-color: rgba(56,189,190,0.4);
+color: #38bdbe;
+background: rgba(56,189,190,0.06);
+}
+
+.filter-btn.active {
+background: #38bdbe;
+border-color: #38bdbe;
+color: #0b1520;
+font-weight: 600;
+}
+
+/* ── Grid ── */
+.grid {
+display: grid;
+grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+gap: 20px;
+}
+
+/* ── Card ── */
+.card {
+background: #112030;
+border: 1px solid rgba(56,189,190,0.15);
+border-radius: 10px;
+overflow: hidden;
+transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s;
+cursor: pointer;
+position: relative;
+display: flex;
+flex-direction: column;
+}
+
+.card:hover {
+transform: translateY(-4px);
+box-shadow: 0 20px 48px rgba(0,0,0,0.5), 0 0 0 1px rgba(56,189,190,0.25);
+border-color: rgba(56,189,190,0.35);
+}
+
+.card.checked {
+border-color: #4caf82;
+background: linear-gradient(180deg, rgba(76,175,130,0.18) 0%, rgba(76,175,130,0.08) 100%);
+box-shadow: 0 0 0 1px rgba(76,175,130,0.35), inset 0 1px 0 rgba(76,175,130,0.2);
+}
+
+.card.checked .card-body {
+background: linear-gradient(180deg, rgba(76,175,130,0.12) 0%, rgba(76,175,130,0.05) 100%);
+}
+
+.card.checked .card-name {
+color: #a8e6c8;
+}
+
+.card.checked::after {
+content: ‘✓ Spotted’;
+position: absolute;
+top: 10px;
+right: 10px;
+height: 26px;
+padding: 0 10px;
+background: #4caf82;
+color: #0b1520;
+border-radius: 13px;
+display: flex;
+align-items: center;
+justify-content: center;
+font-family: ‘DM Mono’, monospace;
+font-size: 10px;
+font-weight: 700;
+letter-spacing: 1px;
+z-index: 5;
+box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+}
+
+/* ── Card image ── */
+.card-img-wrap {
+position: relative;
+width: 100%;
+height: 200px;
+overflow: hidden;
+background: #162840;
+flex-shrink: 0;
+}
+
+.card-img {
+width: 100%;
+height: 100%;
+object-fit: cover;
+display: block;
+transition: transform 0.4s ease;
+}
+
+.card:hover .card-img {
+transform: scale(1.05);
+}
+
+/* Subtle gradient at bottom of image for text readability */
+.card-img-wrap::after {
+content: ‘’;
+position: absolute;
+bottom: 0; left: 0; right: 0;
+height: 60px;
+background: linear-gradient(transparent, rgba(17,32,48,0.6));
+pointer-events: none;
+}
+
+.card-img-placeholder {
+width: 100%;
+height: 100%;
+display: flex;
+flex-direction: column;
+align-items: center;
+justify-content: center;
+gap: 10px;
+font-family: ‘DM Mono’, monospace;
+font-size: 10px;
+color: #3d6070;
+letter-spacing: 1px;
+}
+
+.spinner {
+width: 22px;
+height: 22px;
+border: 2px solid #162840;
+border-top-color: #1e8a8b;
+border-radius: 50%;
+animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── Card body ── */
+.card-body {
+padding: 16px 18px 18px;
+display: flex;
+flex-direction: column;
+flex: 1;
+gap: 0;
+}
+
+.card-category {
+font-family: ‘DM Mono’, monospace;
+font-size: 9px;
+letter-spacing: 3px;
+text-transform: uppercase;
+color: #38bdbe;
+margin-bottom: 5px;
+}
+
+.card-name {
+font-family: ‘Playfair Display’, serif;
+font-size: 1.15rem;
+color: #e2eef2;
+line-height: 1.25;
+margin-bottom: 3px;
+}
+
+.card-latin {
+font-family: ‘Lora’, serif;
+font-style: italic;
+font-size: 0.77rem;
+color: #7aa8b8;
+margin-bottom: 11px;
+}
+
+.card-desc {
+font-size: 0.83rem;
+line-height: 1.65;
+color: #7aa8b8;
+font-family: ‘Lora’, serif;
+flex: 1;
+margin-bottom: 12px;
+}
+
+.card-desc.loading {
+height: 56px;
+border-radius: 4px;
+background: linear-gradient(90deg, #162840 25%, rgba(56,189,190,0.06) 50%, #162840 75%);
+background-size: 200% 100%;
+animation: shimmer 1.5s infinite;
+margin-bottom: 12px;
+}
+
+@keyframes shimmer { to { background-position: -200% 0; } }
+
+/* ── Status tags ── */
+.status-tag {
+display: inline-block;
+font-family: ‘DM Mono’, monospace;
+font-size: 9px;
+letter-spacing: 2px;
+text-transform: uppercase;
+padding: 3px 9px;
+border-radius: 3px;
+align-self: flex-start;
+}
+
+.status-cr { background: rgba(224,90,74,0.15);  color: #e87060; border: 1px solid rgba(224,90,74,0.3); }
+.status-en { background: rgba(212,148,58,0.12); color: #d4943a; border: 1px solid rgba(212,148,58,0.25); }
+.status-vu { background: rgba(212,185,58,0.1);  color: #c8b840; border: 1px solid rgba(212,185,58,0.2); }
+.status-nt { background: rgba(56,189,190,0.1);  color: #38bdbe; border: 1px solid rgba(56,189,190,0.2); }
+.status-lc { background: rgba(76,175,130,0.1);  color: #4caf82; border: 1px solid rgba(76,175,130,0.2); }
+
+/* ── Empty state ── */
+.empty-state {
+text-align: center;
+padding: 80px 20px;
+color: #3d6070;
+font-family: ‘DM Mono’, monospace;
+font-size: 12px;
+letter-spacing: 2px;
+grid-column: 1 / -1;
+}
+
+/* ── Footer ── */
+footer {
+text-align: center;
+padding: 40px 0 0;
+font-family: ‘DM Mono’, monospace;
+font-size: 10px;
+letter-spacing: 2px;
+color: #3d6070;
+border-top: 1px solid rgba(56,189,190,0.15);
+margin-top: 60px;
+}
+
+.hide-checked .card.checked { display: none; }
+
+/* ── Endemic badge ── */
+.card-top-row {
+display: flex;
+align-items: center;
+justify-content: space-between;
+margin-bottom: 5px;
+}
+.card-top-row .card-category { margin-bottom: 0; }
+
+.endemic-badge {
+font-family: ‘DM Mono’, monospace;
+font-size: 8px;
+letter-spacing: 1.5px;
+text-transform: uppercase;
+padding: 2px 7px;
+border-radius: 3px;
+white-space: nowrap;
+}
+.endemic-yes {
+background: rgba(56,189,190,0.12);
+color: #38bdbe;
+border: 1px solid rgba(56,189,190,0.3);
+}
+.endemic-no {
+background: rgba(180,140,80,0.12);
+color: #c8a050;
+border: 1px solid rgba(180,140,80,0.25);
+}
+</style>
+
+</head>
+<body>
+<div class="container">
+  <header>
+    <div class="header-label">— Field Guide —</div>
+    <h1>Galápagos <em>Endemic</em><br>Species Checklist</h1>
+    <p class="subtitle">Endemic &amp; iconic resident species of the archipelago</p>
+  </header>
+
+  <div class="stats-bar">
+    <div class="stat">
+      <span class="stat-num" id="total-count">0</span>
+      <span class="stat-label">Total Species</span>
+    </div>
+    <div class="stat">
+      <span class="stat-num" id="checked-count">0</span>
+      <span class="stat-label">Spotted</span>
+    </div>
+    <div class="stat">
+      <span class="stat-num" id="remaining-count">0</span>
+      <span class="stat-label">Remaining</span>
+    </div>
+  </div>
+
+  <div class="progress-wrap">
+    <div class="progress-header">
+      <span>Progress</span>
+      <span id="progress-pct">0%</span>
+    </div>
+    <div class="progress-track">
+      <div class="progress-fill" id="progress-fill"></div>
+    </div>
+  </div>
+
+  <div class="filters">
+    <button class="filter-btn active" data-filter="all">All</button>
+    <button class="filter-btn" data-filter="bird">Birds</button>
+    <button class="filter-btn" data-filter="reptile">Reptiles</button>
+    <button class="filter-btn" data-filter="mammal">Mammals</button>
+    <button class="filter-btn" data-filter="fish">Fish & Marine</button>
+    <button class="filter-btn" data-filter="invertebrate">Invertebrates</button>
+    <button class="filter-btn" data-filter="endemic-only">Endemic Only</button>
+    <button class="filter-btn" data-filter="spotted">Spotted ✓</button>
+  </div>
+
+  <div class="grid" id="grid"></div>
+
+  <footer>Galápagos Islands, Ecuador · All species depicted are endemic · Click any card to mark as spotted</footer>
+</div>
+
+<script>
+const ANIMALS = [
+  // BIRDS
+  { name: "Galápagos Penguin", latin: "Spheniscus mendiculus", cat: "bird", status: "en", emoji: "🐧", endemic: true },
+  { name: "Flightless Cormorant", latin: "Nannopterum harrisi", cat: "bird", status: "vu", emoji: "🦤", endemic: true },
+  { name: "Galápagos Hawk", latin: "Buteo galapagoensis", cat: "bird", status: "vu", emoji: "🦅", endemic: true },
+  { name: "Waved Albatross", latin: "Phoebastria irrorata", cat: "bird", status: "cr", emoji: "🕊️", endemic: true },
+  { name: "Galápagos Dove", latin: "Zenaida galapagoensis", cat: "bird", status: "lc", emoji: "🐦", endemic: true },
+  { name: "Large Ground Finch", latin: "Geospiza magnirostris", cat: "bird", status: "lc", emoji: "🐦", endemic: true },
+  { name: "Medium Ground Finch", latin: "Geospiza fortis", cat: "bird", status: "lc", emoji: "🐦", endemic: true },
+  { name: "Small Ground Finch", latin: "Geospiza fuliginosa", cat: "bird", status: "lc", emoji: "🐦", endemic: true },
+  { name: "Sharp-beaked Ground Finch", latin: "Geospiza difficilis", cat: "bird", status: "lc", emoji: "🐦", endemic: true },
+  { name: "Cactus Ground Finch", latin: "Geospiza scandens", cat: "bird", status: "lc", emoji: "🐦", endemic: true },
+  { name: "Large Cactus Finch", latin: "Geospiza conirostris", cat: "bird", status: "vu", emoji: "🐦", endemic: true },
+  { name: "Vegetarian Finch", latin: "Platyspiza crassirostris", cat: "bird", status: "lc", emoji: "🐦", endemic: true },
+  { name: "Large Tree Finch", latin: "Camarhynchus psittacula", cat: "bird", status: "lc", emoji: "🐦", endemic: true },
+  { name: "Medium Tree Finch", latin: "Camarhynchus pauper", cat: "bird", status: "cr", emoji: "🐦", endemic: true },
+  { name: "Small Tree Finch", latin: "Camarhynchus parvulus", cat: "bird", status: "lc", emoji: "🐦", endemic: true },
+  { name: "Woodpecker Finch", latin: "Camarhynchus pallidus", cat: "bird", status: "vu", emoji: "🐦", endemic: true },
+  { name: "Mangrove Finch", latin: "Camarhynchus heliobates", cat: "bird", status: "cr", emoji: "🐦", endemic: true },
+  { name: "Warbler Finch", latin: "Certhidea olivacea", cat: "bird", status: "lc", emoji: "🐦", endemic: true },
+  { name: "Galápagos Martin", latin: "Progne modesta", cat: "bird", status: "vu", emoji: "🐦", endemic: true },
+  { name: "Galápagos Mockingbird", latin: "Mimus parvulus", cat: "bird", status: "lc", emoji: "🐦", endemic: true },
+  { name: "Española Mockingbird", latin: "Mimus macdonaldi", cat: "bird", status: "vu", emoji: "🐦", endemic: true },
+  { name: "Floreana Mockingbird", latin: "Mimus trifasciatus", cat: "bird", status: "cr", emoji: "🐦", endemic: true },
+  { name: "San Cristóbal Mockingbird", latin: "Mimus melanotis", cat: "bird", status: "vu", emoji: "🐦", endemic: true },
+  { name: "Galápagos Rail", latin: "Laterallus spilonota", cat: "bird", status: "vu", emoji: "🐦", endemic: true },
+  { name: "Galápagos Petrel", latin: "Pterodroma phaeopygia", cat: "bird", status: "cr", emoji: "🐦", endemic: true },
+  { name: "Galápagos Shearwater", latin: "Puffinus subalaris", cat: "bird", status: "lc", emoji: "🐦", endemic: true },
+  { name: "Band-rumped Storm Petrel", latin: "Hydrobates castro", cat: "bird", status: "lc", emoji: "🐦", endemic: true },
+  { name: "Galápagos Flycatcher", latin: "Myiarchus magnirostris", cat: "bird", status: "lc", emoji: "🐦", endemic: true },
+  // REPTILES
+  { name: "Galápagos Giant Tortoise", latin: "Chelonoidis niger", cat: "reptile", status: "vu", emoji: "🐢", endemic: true },
+  { name: "Marine Iguana", latin: "Amblyrhynchus cristatus", cat: "reptile", status: "vu", emoji: "🦎", endemic: true },
+  { name: "Galápagos Land Iguana", latin: "Conolophus subcristatus", cat: "reptile", status: "vu", emoji: "🦎", endemic: true },
+  { name: "Santa Fe Land Iguana", latin: "Conolophus pallidus", cat: "reptile", status: "vu", emoji: "🦎", endemic: true },
+  { name: "Pink Land Iguana", latin: "Conolophus marthae", cat: "reptile", status: "cr", emoji: "🦎", endemic: true },
+  { name: "Galápagos Lava Lizard", latin: "Microlophus albemarlensis", cat: "reptile", status: "lc", emoji: "🦎", endemic: true },
+  { name: "Española Lava Lizard", latin: "Microlophus delanonis", cat: "reptile", status: "lc", emoji: "🦎", endemic: true },
+  { name: "San Cristóbal Lava Lizard", latin: "Microlophus bivittatus", cat: "reptile", status: "lc", emoji: "🦎", endemic: true },
+  { name: "Floreana Lava Lizard", latin: "Microlophus grayii", cat: "reptile", status: "nt", emoji: "🦎", endemic: true },
+  { name: "Fernandina Lava Lizard", latin: "Microlophus indefatigabilis", cat: "reptile", status: "lc", emoji: "🦎", endemic: true },
+  { name: "Marchena Lava Lizard", latin: "Microlophus habelii", cat: "reptile", status: "lc", emoji: "🦎", endemic: true },
+  { name: "Pinta Lava Lizard", latin: "Microlophus duncanensis", cat: "reptile", status: "lc", emoji: "🦎", endemic: true },
+  { name: "Galápagos Snake", latin: "Pseudalsophis biserialis", cat: "reptile", status: "lc", emoji: "🐍", endemic: true },
+  { name: "Española Galápagos Snake", latin: "Pseudalsophis dorsalis", cat: "reptile", status: "lc", emoji: "🐍", endemic: true },
+  { name: "Galápagos Leaf-toed Gecko", latin: "Phyllodactylus galapagensis", cat: "reptile", status: "lc", emoji: "🦎", endemic: true },
+  // MAMMALS
+  { name: "Galápagos Sea Lion", latin: "Zalophus wollebaeki", cat: "mammal", status: "en", emoji: "🦭", endemic: true },
+  { name: "Galápagos Fur Seal", latin: "Arctocephalus galapagoensis", cat: "mammal", status: "en", emoji: "🦭", endemic: true },
+  { name: "Galápagos Rice Rat", latin: "Aegialomys galapagoensis", cat: "mammal", status: "vu", emoji: "🐀", endemic: true },
+  { name: "Santa Fe Rice Rat", latin: "Oryzomys bauri", cat: "mammal", status: "lc", emoji: "🐀", endemic: true },
+  { name: "Fernandina Rice Rat", latin: "Nesoryzomys fernandinae", cat: "mammal", status: "vu", emoji: "🐀", endemic: true },
+  { name: "Santiago Rice Rat", latin: "Nesoryzomys swarthi", cat: "mammal", status: "cr", emoji: "🐀", endemic: true },
+  { name: "Galápagos Bat", latin: "Lasiurus brachyotis", cat: "mammal", status: "lc", emoji: "🦇", endemic: true },
+  // FISH & MARINE
+  { name: "Galápagos Bullhead Shark", latin: "Heterodontus quoyi", cat: "fish", status: "lc", emoji: "🦈", endemic: true },
+  { name: "Galápagos Damselfish", latin: "Azurina eupalama", cat: "fish", status: "cr", emoji: "🐟", endemic: true },
+  { name: "Galápagos Grunt", latin: "Orthopristis forbesi", cat: "fish", status: "lc", emoji: "🐟", endemic: true },
+  { name: "Galápagos Clingfish", latin: "Gobiesox poecilophthalmus", cat: "fish", status: "lc", emoji: "🐟", endemic: true },
+  { name: "Galápagos Seahorse", latin: "Hippocampus ingens", cat: "fish", status: "vu", emoji: "🐠", endemic: true },
+  { name: "Galápagos Garden Eel", latin: "Heteroconger klausewitzi", cat: "fish", status: "lc", emoji: "🐍", endemic: true },
+  { name: "Black-striped Salema", latin: "Xenocys jessiae", cat: "fish", status: "lc", emoji: "🐟", endemic: true },
+  { name: "Galápagos Four-eyed Blenny", latin: "Dialommus fuscus", cat: "fish", status: "lc", emoji: "🐟", endemic: true },
+  { name: "Galápagos Stingray", latin: "Urotrygon rogersi", cat: "fish", status: "lc", emoji: "🐡", endemic: true },
+  { name: "Hornback Turbot", latin: "Pleuronichthys ritteri", cat: "fish", status: "lc", emoji: "🐟", endemic: true },
+  // INVERTEBRATES
+  { name: "Sally Lightfoot Crab", latin: "Grapsus grapsus", cat: "invertebrate", status: "lc", emoji: "🦀", endemic: true },
+  { name: "Galápagos Land Snail", latin: "Naesiotus nux", cat: "invertebrate", status: "vu", emoji: "🐌", endemic: true },
+  { name: "Galápagos Ghost Crab", latin: "Ocypode gaudichaudii", cat: "invertebrate", status: "lc", emoji: "🦀", endemic: true },
+  { name: "Galápagos Carpenter Bee", latin: "Xylocopa darwini", cat: "invertebrate", status: "lc", emoji: "🐝", endemic: true },
+  { name: "Galápagos Painted Locust", latin: "Schistocerca melanocera", cat: "invertebrate", status: "lc", emoji: "🦗", endemic: true },
+  { name: "Darwin's Hawk Moth", latin: "Xylophanes norfolki", cat: "invertebrate", status: "lc", emoji: "🦋", endemic: true },
+  { name: "Galápagos Dragonfly", latin: "Anax amazili", cat: "invertebrate", status: "lc", emoji: "🦟", endemic: true },
+  { name: "Galápagos Silverfish", latin: "Atelura formicaria", cat: "invertebrate", status: "lc", emoji: "🐛", endemic: true },
+  // NON-ENDEMIC RESIDENTS & ICONIC VISITORS
+  { name: "Magnificent Frigatebird", latin: "Fregata magnificens", cat: "bird", status: "lc", emoji: "🦅", endemic: false },
+  { name: "Great Frigatebird", latin: "Fregata minor", cat: "bird", status: "lc", emoji: "🦅", endemic: false },
+  { name: "Blue-footed Booby", latin: "Sula nebouxii", cat: "bird", status: "lc", emoji: "🐦", endemic: false },
+  { name: "Red-footed Booby", latin: "Sula sula", cat: "bird", status: "lc", emoji: "🐦", endemic: false },
+  { name: "Nazca Booby", latin: "Sula granti", cat: "bird", status: "lc", emoji: "🐦", endemic: false },
+  { name: "Brown Pelican", latin: "Pelecanus occidentalis", cat: "bird", status: "lc", emoji: "🐦", endemic: false },
+  { name: "Red-billed Tropicbird", latin: "Phaethon aethreus", cat: "bird", status: "lc", emoji: "🐦", endemic: false },
+  { name: "American Flamingo", latin: "Phoenicopterus ruber", cat: "bird", status: "lc", emoji: "🐦", endemic: false },
+  { name: "Brown Noddy", latin: "Anous stolidus", cat: "bird", status: "lc", emoji: "🐦", endemic: false },
+  { name: "Galápagos Green Turtle", latin: "Chelonia mydas agassizii", cat: "reptile", status: "en", emoji: "🐢", endemic: false },
+  { name: "Galápagos Hammerhead Shark", latin: "Sphyrna lewini", cat: "fish", status: "cr", emoji: "🦈", endemic: false },
+  { name: "Whale Shark", latin: "Rhincodon typus", cat: "fish", status: "en", emoji: "🦈", endemic: false },
+  { name: "Galápagos Sea Turtle", latin: "Chelonia mydas", cat: "reptile", status: "en", emoji: "🐢", endemic: false },
+  { name: "Manta Ray", latin: "Mobula birostris", cat: "fish", status: "en", emoji: "🐡", endemic: false },
+  { name: "Galápagos Bottlenose Dolphin", latin: "Tursiops truncatus", cat: "mammal", status: "lc", emoji: "🐬", endemic: false },
+
+];
+
+const STATUS_INFO = {
+  cr: { label: "Critically Endangered", cls: "status-cr" },
+  en: { label: "Endangered", cls: "status-en" },
+  vu: { label: "Vulnerable", cls: "status-vu" },
+  nt: { label: "Near Threatened", cls: "status-nt" },
+  lc: { label: "Least Concern", cls: "status-lc" },
+};
+
+let checked = new Set(JSON.parse(localStorage.getItem('galapagos_checked') || '[]'));
+let currentFilter = 'all';
+let images = {};
+
+const DESCRIPTIONS = {
+  // BIRDS
+  "Spheniscus mendiculus": "The only penguin that lives north of the equator, standing just 49 cm tall with a distinctive white facial stripe looping from eye to chin. It hunts sardines and anchovies by porpoising through cold upwelling waters, reaching speeds of 35 km/h underwater. Found year-round on the rocky lava shorelines of Fernandina and western Isabela, with smaller colonies on Bartolomé and Floreana.",
+
+  "Nannopterum harrisi": "The world's only flightless cormorant, its vestigial wings reduced to stubby tufts a third of the size needed for flight, yet its muscular legs propel it powerfully along the seafloor. It dives to depths of 70 m to snatch octopus, eels, and fish from rocky crevices, then stands on shore with wings spread to dry its poorly waterproofed feathers. Restricted entirely to the lava coastlines of Fernandina and the western and northern shores of Isabela.",
+
+  "Buteo galapagoensis": "A compact, dark-brown raptor with a broad wingspan of up to 120 cm — the only diurnal bird of prey in the archipelago and extraordinarily tame around humans. It is polyandrous, with a single female often mating with two or three males who all help raise the chicks. Inhabits open lava fields, cliff edges, and dry scrubland across most of the larger islands, nesting on rocky outcrops and tall cacti.",
+
+  "Phoebastria irrorata": "The largest bird in the Galápagos with a 2.4 m wingspan, its creamy-yellow head and long, vivid yellow bill making it unmistakable at sea. Pairs perform elaborate synchronised courtship rituals — bill-clacking, sky-pointing and a distinctive waddle-dance — and mate for life. Breeds almost exclusively on the windswept plateau of Española island (April–January), spending the rest of the year soaring over the cold Humboldt Current off Peru and Ecuador.",
+
+  "Zenaida galapagoensis": "A compact, cinnamon-and-grey dove with iridescent violet-green neck patches and bright blue eye-rings that give it a jewelled look at close range. It is notably fearless of humans, often feeding at visitors' feet, and drinks from cactus flowers when freshwater is scarce. Common in the arid lowland zones across most islands, foraging on the ground beneath palo santo trees and opuntia cacti.",
+
+  "Geospiza magnirostris": "The largest of Darwin's finches, with a massive conical bill powerful enough to crack the hardest seeds and even the bones of small animals. It is an opportunistic feeder, documented pecking open sea turtle eggs and stealing food from other birds. Inhabits dry lowland scrub on most of the main islands, foraging on the ground and in low vegetation.",
+
+  "Geospiza fortis": "A medium-sized ground finch whose beak size varies dramatically between islands and even between years, famously documented shifting within a single generation in response to drought. It feeds on seeds, insects, and cactus pulp, and will exploit virtually any available food source during El Niño. Widespread in the arid and transitional zones of Santa Cruz, Santiago, Isabela, and several smaller islands.",
+
+  "Geospiza fuliginosa": "The smallest of the ground finches, with a delicate pointed bill perfectly shaped for picking tiny seeds and insects from crevices in bark and soil. Males are jet-black while females are heavily streaked brown, making them one of the most sexually dimorphic of the finch group. Ubiquitous across the arid lowlands of nearly every island, often the most commonly seen finch at visitor sites.",
+
+  "Geospiza difficilis": "A medium ground finch with a notably sharp, pointed bill, the populations on Wolf and Darwin islands famously supplement their diet by pecking wounds in nesting seabirds to drink blood — earning them the nickname 'vampire finches'. On other islands they feed more conventionally on seeds, insects, and cactus. Found in the arid and highland zones of several islands, with the bloodfeeding behaviour unique to the remote northern outposts of Wolf and Darwin.",
+
+  "Geospiza scandens": "Slender and long-billed compared to other ground finches, with a beak specifically adapted for probing deep into opuntia cactus flowers and fruits. It is the primary pollinator and seed disperser of the prickly pear cactus, making it a keystone species in the dry zone ecosystem. Most abundant on islands with large stands of opuntia cactus, including Santa Cruz, Isabela, and Fernandina.",
+
+  "Geospiza conirostris": "A large-billed cactus finch with a deeper, heavier beak than the regular Cactus Ground Finch, allowing it to tear open the tough base of cactus pads as well as probe flowers. Males are entirely black, while females are streaked; both show a distinctive yellow patch at the base of the bill. Restricted to the islands of Española, Genovesa, Darwin, and Wolf, where opuntia cacti are the dominant vegetation.",
+
+  "Platyspiza crassirostris": "The only finch in the Galápagos that feeds almost entirely on plant material — leaves, buds, flowers, and fruit — using its parrot-like curved bill to strip vegetation from branches. It occupies a niche similar to a small parrot and can often be seen hanging acrobatically from branches to reach young leaves. Inhabits the humid highland forests and transitional zones of the larger islands, including Santa Cruz, Santiago, and Isabela.",
+
+  "Camarhynchus psittacula": "A robust tree finch with a thick, curved bill used to tear bark and wood apart in search of large insects and caterpillars in highland forests. Males are black-headed with olive-green bodies; females are more cryptically streaked. Found in the moist highland forests and dense shrublands of Santa Cruz, Isabela, Santiago, and Fernandina.",
+
+  "Camarhynchus pauper": "One of the rarest of Darwin's finches, with fewer than 1,000 individuals remaining, threatened by introduced parasitic flies that devastate nesting success. Its medium-sized, slightly curved bill is used to glean insects and caterpillars from leaf surfaces and bark in humid forest. Restricted entirely to the highlands of Floreana island, where introduced predators and the parasitic fly Philornis downsi pose ongoing threats.",
+
+  "Camarhynchus parvulus": "The smallest tree finch, nimble and quick, with a short curved bill for picking insects from leaves, buds, and crevices in bark — often working through foliage with warbler-like agility. Despite its small size it will occasionally use a twig to dislodge prey from holes, a rare tool-using behaviour. Found in the humid and transitional forest zones of Santa Cruz, Isabela, Santiago, San Cristóbal, and Floreana.",
+
+  "Camarhynchus pallidus": "Famous as one of the world's few tool-using birds, it selects cactus spines or thin twigs and wields them to pry beetle larvae out of dead wood — a skill some individuals seem to learn socially. Its pale plumage and stout bill are adapted for excavating insects from dry wood. Inhabits arid lowland areas and transitions into cloud forest, most commonly observed on Santa Cruz, Isabela, and San Cristóbal.",
+
+  "Camarhynchus heliobates": "Critically endangered with a population estimated at fewer than 100 individuals, making it one of the rarest birds in the world; invasive rats predate nests and parasitic bot flies kill chicks. Its slender bill is used to probe mud and mangrove roots for insects and small invertebrates. Found exclusively in the tiny remaining mangrove forests along the northwest coast of Isabela island.",
+
+  "Certhidea olivacea": "The most warbler-like of Darwin's finches, with a thin, pointed bill used to glean tiny insects and spiders from leaves and flowers with quick, flitting movements through the canopy. It is considered the most ancestral-looking of the Geospizinae finches and closely related to the colonising founder species. Widespread in humid highland forests and moist shrubland across most of the main islands.",
+
+  "Progne modesta": "A sleek, glossy-black swallow with a slightly forked tail, the males entirely dark while females have a pale belly, coursing through the air on swept-back wings in pursuit of flying insects. It is the only swallow endemic to the Galápagos and nests in cliff crevices and lava tube caves. Seen over open areas, coastal cliffs, and highland plains across most of the larger islands, particularly Isabela and Santa Cruz.",
+
+  "Mimus parvulus": "Bold, long-tailed, and fiercely curious, the Galápagos Mockingbird will land on visitors' heads and investigate camera lenses without fear — behaviour shaped by millennia without terrestrial predators. It is an omnivore, eating insects, lizard eggs, cactus fruit, and even stealing food from other birds. Common in arid lowland scrub across most of the larger islands, including Santa Cruz, Isabela, and Santiago.",
+
+  "Mimus macdonaldi": "The largest mockingbird in the Galápagos, noticeably more aggressive than its relatives, with a longer, more curved bill used to probe for food under rocks and in crevices. It has been observed drinking blood from seabird wounds and eating the eggs and chicks of boobies. Found only on Española island, where it inhabits the rocky coastal scrub and dry interior.",
+
+  "Mimus trifasciatus": "Once found on Floreana, this mockingbird was exterminated from the main island by introduced cats and rats in the 1800s and now survives only on the tiny, uninhabited islets of Champion and Gardner-by-Floreana. It was the first bird Darwin collected in the Galápagos, and comparing the mockingbirds between islands helped spark his theory of evolution. With fewer than 500 individuals remaining, it is the most threatened mockingbird in the world.",
+
+  "Mimus melanotis": "Distinguished by its black ear patch — the darkest facial marking of any Galápagos mockingbird — giving it a masked appearance against its grey-brown plumage. Like its relatives it is boldly inquisitive and omnivorous, eating insects, berries, lizard eggs, and carrion. Restricted to San Cristóbal island, where it inhabits both the arid coastal scrub and the humid highland interior.",
+
+  "Laterallus spilonota": "A secretive, chicken-sized rail with rufous underparts and dark-barred flanks, far more often heard than seen as it creeps through dense vegetation. Its sharp, repetitive call rings out from wet fern meadows and highland grasslands, especially at dawn and dusk. Inhabits the humid highland zones — particularly Scalesia and fern-sedge communities — of Santa Cruz, Isabela, Santiago, and Fernandina above 300 m elevation.",
+
+  "Pterodroma phaeopygia": "A medium-sized gadfly petrel that spends most of its life over the open ocean, returning to land only to breed in underground burrows it excavates in volcanic soil. Its dark upperparts and white underparts make it hard to spot against ocean glare, but it is an agile flier capable of banking sharply in strong winds. Nests in highland areas of Santa Cruz, San Cristóbal, Floreana, and Santiago, typically above 300 m in humid zone soils.",
+
+  "Puffinus subalaris": "A small, fast-flying seabird with chocolate-brown upperparts and white underparts, it skims the wave-troughs in buoyant, banking flight over the cold Cromwell Current. It dives to catch small fish and squid, often forming mixed feeding flocks with boobies and dolphins. Nests in lava crevices and talus slopes on rocky islets around the central and western Galápagos, including Daphne Major and the islets off Isabela.",
+
+  "Hydrobates castro": "One of the smallest seabirds in the world, barely larger than a sparrow, fluttering over open ocean on long, paddle-shaped wings and pattering its feet on the surface while feeding on plankton and tiny fish. It returns to land only at night to avoid predation, nesting in deep rock crevices and lava tubes. Found on most island groups in the Galápagos, nesting in rocky coastal terrain; the archipelago hosts two seasonally isolated breeding populations.",
+
+  "Myiarchus magnirostris": "A compact, upright flycatcher with a rufous-tinged tail, pale yellow belly, and a habit of pumping its tail while perched — a reliable behavioural ID clue. It sallies out from a prominent perch to snatch insects mid-air or gleans them from leaves and cactus pads. Occupies a wide range of habitats from arid coastal scrub to humid forest interiors, common across most of the larger islands year-round.",
+
+  // REPTILES
+  "Chelonoidis niger": "The largest tortoise on Earth, reaching up to 250 kg and living well over a century; individuals have been recorded alive for 175 years. Each island population has a distinct shell shape — dome-shaped in humid highlands, saddle-backed in arid zones where tortoises must stretch their long necks to reach tall cacti. Found across six main islands and several smaller ones, inhabiting everything from sea-level lava fields to highland forests above 700 m on Isabela and Santa Cruz.",
+
+  "Amblyrhynchus cristatus": "The only seagoing lizard in the world, with a flattened tail for sculling through surf and laterally compressed claws for gripping wave-battered rock while grazing on algae. After each dive in the cold ocean it basks in dense communal piles, absorbing solar heat to restore its body temperature. Inhabits virtually every island's rocky coastline and intertidal zones, with the largest individuals found on Isabela and Fernandina.",
+
+  "Conolophus subcristatus": "A stocky, golden-orange iguana up to 1.5 m long that feeds almost exclusively on opuntia cactus pads, flowers, and fallen fruit, and is patient enough to wait below a cactus for the spines to soften. Males defend territories with vigorous head-bobbing and push-up displays. Found in the dry lowland and coastal scrub of Santa Cruz, South Plaza, Isabela, Fernandina, and several smaller islands.",
+
+  "Conolophus pallidus": "Paler and slightly smaller than the Galápagos Land Iguana, with a more cream-coloured body adapted to blend with the pale coral sand and limestone outcrops of its home island. It feeds on the abundant prickly pear cacti that dominate the island and digs nest burrows in sandy soils. Found only on Santa Fe island, in the open cactus forest and coastal scrub.",
+
+  "Conolophus marthae": "Discovered scientifically only in 2009, this ghostly pink-and-black iguana is one of the rarest reptiles on Earth, with an estimated population of under 200 adults surviving on a single ancient caldera. Its rose-pink skin streaked with black stripes is unlike any other iguana, and genetic analysis shows it diverged from the other land iguanas over 5 million years ago. Restricted entirely to the upper slopes of Volcán Wolf on northern Isabela, above 1,000 m elevation.",
+
+  "Microlophus albemarlensis": "A lively, sun-loving lizard with males displaying bright orange-red throats and chests during territorial disputes — a flash of colour against the dark lava. It feeds on insects, carrion, ticks picked from iguanas, and even algae scraped from rocks at the tideline. The most widespread lava lizard, found across Isabela, Fernandina, Santiago, Santa Cruz, and many smaller islands in varied habitats from beach to highlands.",
+
+  "Microlophus delanonis": "The largest of all the Galápagos lava lizards, males reaching 30 cm, with vivid brick-red throats and bold black dorsal markings that make them among the most striking lizards in the archipelago. Like all lava lizards, females are smaller with crimson-red heads but plainer bodies. Endemic to Española island and its satellite islet Gardner-by-Española, inhabiting the rocky coastal lava and dry interior scrub.",
+
+  "Microlophus bivittatus": "A robust lava lizard with a distinctive pale lateral stripe running the length of its body, making it readily distinguishable from other species in the group. Males perform energetic push-up displays on prominent rocks to defend territories and attract females. Found only on San Cristóbal island and its satellite islets, in the arid coastal zone and lower transitional scrub.",
+
+  "Microlophus grayii": "A medium-sized lava lizard with reddish-orange facial colouring in females and mottled grey-brown males, found in small, fragmented populations threatened by introduced rats, cats, and land clearing. It feeds on insects, small invertebrates, and plant matter in the dry coastal zone. Restricted to Floreana island and its small satellite islets, including Champion and Gardner-by-Floreana.",
+
+  "Microlophus indefatigabilis": "A slender, fast-moving lava lizard adapted to the harsh volcanic terrain of one of the most volcanically active islands in the world. Males develop orange-red blotching on the flanks during the breeding season. Endemic to Fernandina island — the most pristine and least invaded island in the Galápagos — where it inhabits recent lava flows and rocky shorelines.",
+
+  "Microlophus habelii": "A small lava lizard with subtle grey-brown patterning that provides excellent camouflage against the dark basalt lava of its remote island home. Males engage in push-up and head-bob displays on rock surfaces to establish dominance. Confined to the remote and rarely visited Marchena island in the northern Galápagos, inhabiting lava fields and coastal scrub.",
+
+  "Microlophus duncanensis": "One of the least-studied lava lizard species, restricted to the remote volcanic island of Pinta in the northern Galápagos. Males have orange-red throats during the breeding season; females sport the vivid red head typical of female lava lizards across the group. Inhabits lava boulder fields and coastal scrub on Pinta, an island known as the last home of Lonesome George the tortoise.",
+
+  "Pseudalsophis biserialis": "A slender, fast-moving colubrid snake up to 1 m long, with a distinctive two-striped pattern running along its olive-brown body — harmless to humans but an agile predator of lava lizards, small birds, and marine iguana hatchlings. It hunts by scent and ambush, and large groups famously mob newly-hatched marine iguanas in scenes filmed for BBC's Planet Earth II. Widespread on rocky shorelines, lava fields, and scrubland across the central and western islands.",
+
+  "Pseudalsophis dorsalis": "A slightly heavier-bodied snake than its close relative, with a bolder dorsal stripe and a tendency to inhabit drier, more exposed terrain on the island of Española. It hunts geckos, lava lizards, and the eggs and chicks of ground-nesting seabirds in the colony at Punta Suárez. Endemic to Española and its nearby islets, where it shelters under rocks and in lava crevices.",
+
+  "Phyllodactylus galapagensis": "A small, translucent-skinned gecko with adhesive toe-pads that allow it to scurry across smooth vertical rock faces and even ceilings with effortless grip. It is nocturnal, emerging after dark to hunt insects and spiders attracted to cactus flowers and decomposing vegetation. Found across most of the Galápagos islands in rocky terrain, lava fields, and human settlements, hiding under rocks and bark during the day.",
+
+  // MAMMALS
+  "Zalophus wollebaeki": "A highly social, charismatic pinniped with males reaching 250 kg, their domed foreheads and booming territorial barks dominating sandy beaches from dawn to dusk. Bachelor males patrol the surf zone, while dominant beach-masters maintain harems and battle rivals in explosive, scar-leaving fights. Breeds on sandy beaches and rocky shores across virtually all of the Galápagos islands, with the largest colonies on Santa Fe, San Cristóbal, and South Plaza.",
+
+  "Arctocephalus galapagoensis": "Smaller and shaggier than the sea lion, with a more pointed face and a thick underfur that made it nearly hunted to extinction for the fur trade in the 19th century. It feeds nocturnally on fish and squid drawn to the surface in deep, cold waters, and rests in shaded lava grottos and sea caves during the heat of the day. Concentrated on the cooler western islands of Fernandina and Isabela, with smaller groups on Santiago's James Bay and Genovesa.",
+
+  "Aegialomys galapagoensis": "A small native rodent with soft brown fur, large dark eyes, and the generalist diet typical of rice rats — seeds, plant matter, insects, and small invertebrates. It is an important prey item for Galápagos hawks and barn owls, and plays a role in seed dispersal. Found in the arid zone and transition scrub of Santa Fe and Fernandina, sheltering in rock crevices and dense low vegetation.",
+
+  "Oryzomys bauri": "One of the few native rodents to survive the introduction of black rats to the Galápagos, persisting on Santa Fe which remains rat-free. A small, agile rodent that forages at night among rocks and dry leaf litter for seeds and insects. Restricted to Santa Fe island, where it inhabits the opuntia cactus forest and rocky lava terrain of the arid lowlands.",
+
+  "Nesoryzomys fernandinae": "A critically threatened native rat surviving on Fernandina — the only large island that remains entirely free of introduced black rats, cats, and dogs. It is nocturnal and omnivorous, foraging on the volcanic terrain for seeds, plant material, and invertebrates. Confined to Fernandina island, where it occupies lava fields and the sparse vegetation of the lower slopes, a stronghold of Galápagos biodiversity.",
+
+  "Nesoryzomys swarthi": "Rediscovered on Santiago in 1997 after being feared extinct for nearly 60 years, this rice rat had been suppressed to near-extinction by introduced black rats before a successful eradication programme. It is a generalist omnivore with large eyes adapted for nocturnal foraging. Found only on Santiago island, where rat eradication has allowed its population to begin recovering in the arid and transitional scrub zone.",
+
+  "Lasiurus brachyotis": "One of only two native land mammals in the Galápagos, this small, reddish-brown bat roosts in rock crevices and tree hollows and emerges at dusk to hawk insects over open scrubland and highland meadows. It likely colonised the islands by wind-assisted trans-oceanic flight from South America. Widespread but rarely seen across most of the larger islands, foraging over any open habitat from sea level to the humid highlands.",
+
+  // FISH & MARINE
+  "Heterodontus quoyi": "A small, slow-moving bullhead shark reaching about 1 m, with a blunt pig-like snout, distinctive ridges above the eyes, and a mottled brown pattern that blends with rocky substrate. It crushes sea urchins, molluscs, and crustaceans with its flattened rear teeth, active mainly at night while resting wedged in crevices by day. Inhabits shallow rocky reefs and sandy bottoms around the western and central Galápagos, typically at depths of 3–40 m.",
+
+  "Azurina eupalama": "A critically endangered damselfish with a striking smoky-grey body and a deeply forked tail, once abundant in large schools but now rarely seen following El Niño warming events in 1982–83 and 1997–98 that devastated its population. It feeds on zooplankton in mid-water above rocky reefs. Historically found around the rocky reefs and coral gardens of the central Galápagos at depths of 5–30 m; current status and distribution are poorly known.",
+
+  "Orthopristis forbesi": "A schooling grunt with a silvery body marked by rows of small blue-grey spots, producing characteristic grunting sounds by grinding its pharyngeal teeth — hence the family name. It feeds on benthic invertebrates and small crustaceans by rooting through sandy sediments near reefs. Found in shallow rocky and sandy habitats around the central Galápagos islands, typically at depths of 2–20 m.",
+
+  "Gobiesox poecilophthalmus": "A tiny, cryptic clingfish with a powerful adhesive disc formed from its modified pelvic fins, allowing it to cling to wave-battered rock faces in the intertidal zone without being swept away. It feeds on small invertebrates picked from algae-covered surfaces and shelters in narrow crevices. Inhabits the rocky intertidal and shallow subtidal zones across the Galápagos islands, often found under boulders in surge channels.",
+
+  "Hippocampus ingens": "The largest seahorse in the eastern Pacific, reaching 30 cm in height, with a prehensile tail it uses to anchor itself to gorgonian sea fans and black corals in strong currents. Males brood the young in a ventral pouch, releasing hundreds of fully-formed miniature seahorses at birth. Found at depths of 1–60 m in rocky reefs and sea grass beds around the Galápagos, particularly around Isabela and the upwelling-influenced western islands.",
+
+  "Heteroconger klausewitzi": "Dozens to hundreds of these slender, sand-coloured eels emerge simultaneously from individual burrows in sandy-bottom colonies, their upper bodies swaying in the current to catch passing plankton in a mesmerising undulating display. At the first hint of a diver approaching, the entire colony vanishes beneath the sand in seconds. Found in sandy lagoons and sheltered bays at depths of 10–45 m, particularly around the central and eastern Galápagos.",
+
+  "Xenocys jessiae": "A schooling fish with vivid blue horizontal stripes on a silver body, often forming dense, shimmering walls of thousands of individuals above rocky reefs, a favourite target for Galápagos sea lions and penguins hunting cooperatively. It feeds on zooplankton filtered from the water column. Common around the rocky reefs and seamounts of the central Galápagos at depths of 3–25 m.",
+
+  "Dialommus fuscus": "A remarkable blenny capable of leaving the water voluntarily, using its stiffened pectoral fins to crawl across wet rocks in the high intertidal spray zone — one of the few amphibious fish in the Galápagos. Its eyes are adapted to see both in air and water simultaneously. Inhabits the rocky high intertidal and splash zone of wave-exposed shores across the archipelago, particularly on the southern and eastern islands.",
+
+  "Urotrygon rogersi": "A small, round-disc stingray with a short tail spine, mottled olive-brown above to match sandy and silty seafloor, gliding silently just above the substrate in search of worms, crustaceans, and small fish. It buries itself in sand with only its spiracles exposed to breathe when resting. Found in shallow sandy-bottomed bays, estuaries, and sheltered lagoons throughout the Galápagos, typically at depths of 1–20 m.",
+
+  "Pleuronichthys ritteri": "A flattened, diamond-shaped turbot that lies camouflaged on the sandy or rocky seafloor with both eyes migrated to the upper side of its body, able to change colour and pattern to near-perfectly match its substrate. It ambushes small fish and invertebrates with a lightning-fast upward strike. Inhabits sandy and rubble bottoms near rocky reefs in the central and eastern Galápagos, at depths of 10–50 m.",
+
+  // INVERTEBRATES
+  "Grapsus grapsus": "One of the most vividly coloured crabs in the world — adults are brilliant scarlet-red with yellow spots, while juveniles are near-invisible in dark mottled camouflage against black lava. Thousands blanket the rocky shorelines of every island, their long, flattened legs allowing them to sprint across wave-washed rock at remarkable speed. A critical part of the intertidal ecosystem, scavenging carrion, algae, and the parasitic ticks that they clean from marine iguanas.",
+
+  "Naesiotus nux": "A small, high-spired land snail with a creamy-brown shell up to 2 cm tall, found in dense aggregations on tree bark and leaf litter in humid highland forests. It grazes on lichens and fungi on the surfaces of trees and rocks, playing a minor role in nutrient cycling. Inhabits the humid zone above 300 m on Santa Cruz and a few other larger islands, sheltering under bark and in leaf litter during dry periods.",
+
+  "Ocypode gaudichaudii": "A pale, sand-coloured ghost crab with stalked eyes perched on long eyestalks, capable of sprinting across beaches at over 3 m/s — among the fastest invertebrates on land. It emerges from burrows at night to scavenge carrion, sea turtle eggs, and hatchlings, and is an important beach-zone predator. Burrows in sandy beaches and dune systems above the tideline across most of the Galápagos islands.",
+
+  "Xylocopa darwini": "A large, robust carpenter bee — the only native bee in the Galápagos — with shiny black females and smaller, fawn-coloured males, buzzing loudly as they bore circular nest tunnels into dry cactus wood and dead tree branches. It is the most important native pollinator in the archipelago, fertilising opuntia cacti, Scalesia trees, and numerous other endemic plants. Found across most of the larger islands in arid scrub and transitional zones.",
+
+  "Schistocerca melanocera": "A striking grasshopper with a vivid yellow-and-black banded abdomen and red hindwings that flash like warning signals when it flies, thought to advertise unpalatability to predators. It feeds on a wide range of native plants and can form loose aggregations that cause localised defoliation. Inhabits arid lowland scrub and transitional zones across most of the larger islands, particularly common in years following El Niño rainfall events.",
+
+  "Xylophanes norfolki": "A fast-flying hawk moth with intricately patterned olive-green and brown wings spanning up to 10 cm, hovering motionless before flowers at dusk with a proboscis extended to drink nectar. It is an important pollinator of night-blooming Galápagos plants, including the long-tubed flowers of Ipomoea and Nicotiana species. Inhabits arid lowland areas and transitional scrub across several of the main islands, most active in the hours after sunset.",
+
+  "Anax amazili": "A large, powerful dragonfly with a vivid turquoise-blue abdomen in males and a bronze-green abdomen in females, patrolling the edges of freshwater ponds and highland lakes on rapid, direct flight. It is an apex predator of the freshwater invertebrate community, catching other insects in mid-air. Found near the small freshwater pools, volcanic crater lakes, and highland wetlands of Santa Cruz, Isabela, and San Cristóbal.",
+
+  "Atelura formicaria": "A tiny, silver-scaled silverfish that lives almost entirely inside the nests of Galápagos ants, feeding on the fungi, stored food, and organic debris within ant colonies — a relationship known as myrmecophily. It moves by mimicking the chemical signals of its ant hosts and can run with surprising speed when disturbed. Found across most islands wherever ant colonies occur, in leaf litter, under bark, and in soil, often overlooked due to its minute size and cryptic habits.",
+
+  // NON-ENDEMIC RESIDENTS
+  "Fregata magnificens": "The largest frigatebird, with a 2.4 m wingspan and a brilliant scarlet throat pouch that males inflate to a balloon-like globe during spectacular courtship displays on North Seymour and Genovesa. It is a master of kleptoparasitism, harassing boobies and tropicbirds mid-air until they drop their catch, then snatching the stolen fish before it hits the water. Nests colonially in low saltbush and mangrove trees on North Seymour, Isabela, Española, and San Cristóbal, soaring over coastal waters year-round.",
+
+  "Fregata minor": "Slightly smaller than the Magnificent Frigatebird but equally aerial, spending weeks at sea without landing — even sleeping in short bursts on the wing. Males display the same scarlet pouch but are entirely black; females have a distinctive white chest patch that sets them apart from Magnificents at a glance. Breeds on Genovesa, Darwin, Wolf, and other outer islands in low shrubs and trees, foraging over the open ocean and coastal waters across the whole archipelago.",
+
+  "Sula nebouxii": "Instantly recognisable by its improbably bright turquoise-blue feet, which males show off in an exaggerated high-stepping dance during courtship, lifting each foot slowly as if proudly presenting them. It plunge-dives from heights of up to 25 m, folding its wings into a perfect dart just before impact to catch sardines at speed. Breeds in large, noisy colonies on North Seymour, Española, Isabela, and several smaller islands, nesting directly on bare ground or open rock.",
+
+  "Sula sula": "The only booby that nests in trees and shrubs rather than on the ground, gripping branches with its bright red feet and building a rough platform nest of twigs in dense vegetation. It is the most oceanic of the three Galápagos boobies, flying far offshore to plunge-dive for flying fish and squid in deep water. Breeds in large colonies on Genovesa — known as 'Bird Island' — as well as on Darwin, Wolf, and the outer northern islands.",
+
+  "Sula granti": "The largest booby in the Galápagos, gleaming white with jet-black wings and a golden-yellow bill, it nests in dense colonies where the classic 'sky-pointing' courtship display — both birds raising their bills and calling in unison — is a hypnotic spectacle. Its sharp bill leaves a distinctive blue-black mask around the face. Breeds in huge colonies on Española's Punta Suárez and on Genovesa, nesting on bare ground and rocky plateaus across several islands.",
+
+  "Pelecanus occidentalis": "A large, prehistoric-looking seabird with a massive throat pouch that expands as a scoop-net during its signature feeding technique — a dramatic head-first plunge from up to 10 m that stuns fish beneath the surface. Despite its bulk (up to 5 kg), it is surprisingly graceful in flight, often soaring in tight single-file formations just above the wave tops. A year-round resident in Galápagos harbours, rocky coastlines, and mangrove lagoons on all the main islands; the local subspecies is slightly smaller and darker than mainland birds.",
+
+  "Phaethon aethreus": "A stunning white seabird with a coral-red bill, black eye-mask, and two extraordinary central tail feathers that stream behind it like white ribbons — nearly doubling its body length — as it careens past cliff faces on stiff, shivering wingbeats. It dives steeply for fish and squid, then beats its way back to cliff nest sites with fish carried crosswise in its bill. Breeds in rock crevices and cliff holes on most Galápagos islands, most reliably seen soaring along the clifftops of South Plaza, Española, and Genovesa.",
+
+  "Phoenicopterus ruber": "The American Flamingo's shocking pink plumage — deepened by the carotenoids in the brine shrimp and algae it filters from shallow water — makes it among the most vividly coloured birds in the archipelago, though with only 350–400 individuals it is also one of the rarest. Its uniquely bent bill is held upside-down in the water, pumping mud through lamellae to sieve tiny crustaceans. Found in brackish saltwater lagoons and coastal ponds on Isabela, Floreana, Santiago, Rábida, and Santa Cruz — never more than a few dozen birds at a single site.",
+
+  "Anous stolidus": "A compact, chocolate-brown tern with a pale grey-white forehead cap and a wedge-shaped tail — the reverse of the swallow-tailed gull's forked pattern. It has a remarkable habit of hovering at a pelican's open bill after a dive, snatching small fish from the water draining from the pouch. Nests year-round in small colonies on rocky ledges, cliff crevices, and under overhangs on most islands, and is commonly seen foraging over shallow inshore waters.",
+
+  "Chelonia mydas agassizii": "The Galápagos subspecies of the Pacific Green Sea Turtle is the only sea turtle that nests regularly in the archipelago, females hauling themselves ashore at night to lay eggs in the warm sand of isolated beaches. Adults feed almost entirely on algae and seagrass, and their green-tinted fat gives the species its name. Nests predominantly on the sandy beaches of Isabela, Santa Cruz, and Floreana from December to June; juveniles and adults are seen year-round in calm bays, mangrove channels, and rocky reefs throughout the islands.",
+
+  "Sphyrna lewini": "The scalloped hammerhead's bizarrely flattened, hammer-shaped head houses widely spaced eyes and electroreceptors that give it a 360-degree field of vision and extraordinary sensitivity to the electrical fields of prey hiding in sand. Schools of hundreds gather around Darwin and Wolf islands in one of the most spectacular shark aggregations on Earth, particularly between June and November. Found throughout Galápagos waters from shallow reefs to open ocean; the largest aggregations occur at the cooler, nutrient-rich seamounts of Darwin and Wolf in the far north.",
+
+  "Rhincodon typus": "The largest fish in the ocean, reaching up to 12 m and 20 tonnes, yet entirely harmless — it filter-feeds by swimming slowly through plankton blooms and baitfish schools with its vast mouth agape, sieving tonnes of water through gill rakers. Individuals are identified by their unique spot patterns, like fingerprints. Aggregates seasonally around Darwin and Wolf islands between June and November, drawn by the cold upwelling that triggers plankton explosions; occasionally seen at other islands.",
+
+  "Mobula birostris": "The oceanic manta ray, with a wingspan reaching 7 m, glides through the water column on triangular wings with effortless grace, occasionally breaching entirely clear of the surface and crashing back with a thunderclap that can be heard half a kilometre away. It filter-feeds on zooplankton concentrated by upwelling currents, funnelling water through its open mouth with the aid of distinctive horn-like cephalic fins. Seen throughout Galápagos waters year-round but most reliably at dive sites around Wolf, Darwin, and Isabela where cold, plankton-rich upwellings are strongest.",
+
+  "Tursiops truncatus": "Bottlenose dolphins are regular, boisterous companions to boats throughout the Galápagos, bow-riding and leaping alongside vessels with evident enthusiasm; resident groups have been observed using sponges as foraging tools, a behaviour rare outside Australia. They hunt cooperatively, herding schools of fish into tight bait balls against the surface before taking turns charging through. Found year-round in coastal bays, around seamounts, and in deep offshore waters across all of the Galápagos; the local population shows some genetic distinctiveness from mainland Pacific dolphins.",
+
+  "Chelonia mydas": "The green sea turtle is one of the most charismatic visitors to Galápagos waters, its streamlined shell and powerful front flippers enabling graceful underwater flight through coral gardens and kelp forests. Adults are herbivores grazing on seagrass and algae, while juveniles eat jellyfish, crustaceans and invertebrates. Encountered year-round in shallow lagoons, sandy bays, and rocky reefs throughout the archipelago; the subspecies nesting in the Galápagos is considered among the most genetically distinct Pacific green turtle populations.",
+
+};
+
+let descriptions = { ...DESCRIPTIONS };
+
+const grid = document.getElementById('grid');
+
+function saveChecked() {
+  localStorage.setItem('galapagos_checked', JSON.stringify([...checked]));
+}
+
+function updateStats() {
+  const visible = ANIMALS.filter(a => matchesFilter(a));
+  const visibleChecked = visible.filter(a => checked.has(a.latin)).length;
+  const total = ANIMALS.length;
+  const totalChecked = checked.size;
+
+  document.getElementById('total-count').textContent = total;
+  document.getElementById('checked-count').textContent = totalChecked;
+  document.getElementById('remaining-count').textContent = total - totalChecked;
+
+  const pct = total ? Math.round((totalChecked / total) * 100) : 0;
+  document.getElementById('progress-pct').textContent = pct + '%';
+  document.getElementById('progress-fill').style.width = pct + '%';
+}
+
+function matchesFilter(a) {
+  if (currentFilter === 'all') return true;
+  if (currentFilter === 'spotted') return checked.has(a.latin);
+  if (currentFilter === 'endemic-only') return a.endemic === true;
+  return a.cat === currentFilter;
+}
+
+function getStatusTag(s) {
+  const info = STATUS_INFO[s] || { label: s, cls: '' };
+  return `<span class="status-tag ${info.cls}">${info.label}</span>`;
+}
+
+function getEndemicBadge(animal) {
+  if (animal.endemic === true) {
+    return '<span class="endemic-badge endemic-yes">Endemic</span>';
+  }
+  return '<span class="endemic-badge endemic-no">Native Resident</span>';
+}
+
+function renderCard(animal, idx) {
+  const card = document.createElement('div');
+  card.className = 'card' + (checked.has(animal.latin) ? ' checked' : '');
+  card.dataset.idx = idx;
+  card.dataset.latin = animal.latin;
+
+  const imgHtml = images[animal.latin]
+    ? `<div class="card-img-wrap"><img class="card-img" src="${images[animal.latin]}" alt="${animal.name}" /></div>`
+    : `<div class="card-img-wrap"><div class="card-img-placeholder"><div class="spinner"></div><span>Loading image…</span></div></div>`;
+
+  const descHtml = descriptions[animal.latin]
+    ? `<p class="card-desc">${descriptions[animal.latin]}</p>`
+    : `<div class="card-desc loading"></div>`;
+
+  card.innerHTML = `
+    ${imgHtml}
+    <div class="card-body">
+      <div class="card-top-row"><div class="card-category">${animal.cat}</div>${getEndemicBadge(animal)}</div>
+      <div class="card-name">${animal.name}</div>
+      <div class="card-latin">${animal.latin}</div>
+      ${descHtml}
+      ${getStatusTag(animal.status)}
+    </div>
+  `;
+
+  card.addEventListener('click', () => {
+    if (checked.has(animal.latin)) {
+      checked.delete(animal.latin);
+      card.classList.remove('checked');
+    } else {
+      checked.add(animal.latin);
+      card.classList.add('checked');
+    }
+    saveChecked();
+    updateStats();
+    if (currentFilter === 'spotted') renderGrid();
+  });
+
+  return card;
+}
+
+function renderGrid() {
+  grid.innerHTML = '';
+  const filtered = ANIMALS.filter(a => matchesFilter(a));
+  if (!filtered.length) {
+    grid.innerHTML = '<div class="empty-state">NO SPECIES MATCH THIS FILTER</div>';
+    return;
+  }
+  filtered.forEach((a, i) => {
+    grid.appendChild(renderCard(a, ANIMALS.indexOf(a)));
+  });
+  updateStats();
+}
+
+// Filter buttons
+document.querySelectorAll('.filter-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentFilter = btn.dataset.filter;
+    renderGrid();
+  });
+});
+
+// Update a card's image/desc in place
+function updateCard(latin, imgUrl, desc) {
+  const card = grid.querySelector(`[data-latin="${CSS.escape(latin)}"]`);
+  if (!card) return;
+  if (imgUrl) {
+    const wrap = card.querySelector('.card-img-wrap');
+    const placeholder = card.querySelector('.card-img-placeholder');
+    if (placeholder && wrap) {
+      const img = document.createElement('img');
+      img.className = 'card-img';
+      img.src = imgUrl;
+      img.alt = latin;
+      placeholder.replaceWith(img);
+    }
+  }
+  if (desc) {
+    const loading = card.querySelector('.card-desc.loading');
+    if (loading) {
+      loading.classList.remove('loading');
+      loading.textContent = desc;
+    } else {
+      const existing = card.querySelector('.card-desc');
+      if (existing) existing.textContent = desc;
+    }
+  }
+}
+
+// Fetch from iNaturalist API (works from browser, reliable CORS)
+async function fetchiNaturalist(latinName) {
+  const url = `https://api.inaturalist.org/v1/taxa?q=${encodeURIComponent(latinName)}&per_page=1&rank=species`;
+  try {
+    const resp = await fetch(url, { headers: { 'Accept': 'application/json' } });
+    if (!resp.ok) return null;
+    const data = await resp.json();
+    const taxon = data.results?.[0];
+    if (!taxon) return null;
+    const photo = taxon.default_photo;
+    const img = photo?.medium_url?.replace('/medium.', '/large.') || photo?.medium_url || null;
+    return { img };
+  } catch {
+    return null;
+  }
+}
+
+async function fetchAnimalInfo(animal) {
+  const inat = await fetchiNaturalist(animal.latin);
+  const img = images[animal.latin] || inat?.img || null;
+  const desc = descriptions[animal.latin] || `${animal.name} is endemic to the Galápagos Islands.`;
+  return { img, desc };
+}
+
+// Load all animal data with concurrency limit
+async function loadAllAnimals() {
+  const CONCURRENCY = 4;
+  let idx = 0;
+
+  async function worker() {
+    while (idx < ANIMALS.length) {
+      const i = idx++;
+      const animal = ANIMALS[i];
+      const { desc, img } = await fetchAnimalInfo(animal);
+      descriptions[animal.latin] = desc;
+      if (img) images[animal.latin] = img;
+      updateCard(animal.latin, img || null, desc);
+    }
+  }
+
+  const workers = Array.from({ length: CONCURRENCY }, worker);
+  await Promise.all(workers);
+}
+
+// Init
+renderGrid();
+loadAllAnimals();
+</script>
+
+</body>
+</html>
